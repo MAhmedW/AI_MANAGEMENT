@@ -9,6 +9,10 @@ export default function ManagerDashboard() {
     navigate("/signin");
   };
 
+  const handleAddMember = () => {
+    navigate("/add_member"); // You can replace this with modal/form logic
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans px-6 py-4">
       {/* Header */}
@@ -16,16 +20,24 @@ export default function ManagerDashboard() {
         <div className="text-xl font-bold text-[#0a0f1c]">
           Project Manager Dashboard
         </div>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="flex items-center gap-1">
+        <div className="flex flex-col items-end gap-2 text-sm">
+          <div className="flex items-center gap-2">
             <span className="font-medium">John Manager</span>
-            <span className="bg-gray-200 px-2 py-0.5 rounded text-xs">Project Manager</span>
-          </span>
+            <span className="bg-gray-200 px-2 py-0.5 rounded text-xs">
+              Project Manager
+            </span>
+          </div>
           <button
             onClick={handleLogout}
             className="text-red-600 hover:underline font-medium"
           >
             Logout
+          </button>
+          <button
+            onClick={handleAddMember}
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-1.5 px-4 rounded-lg text-sm border-4 border-[#19581B] shadow"
+          >
+            Add Member
           </button>
         </div>
       </div>
@@ -33,7 +45,9 @@ export default function ManagerDashboard() {
       {/* Welcome Message */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold">Welcome back, John!</h2>
-        <p className="text-gray-600">Manage your projects and team performance with comprehensive insights.</p>
+        <p className="text-gray-600">
+          Manage your projects and team performance with comprehensive insights.
+        </p>
       </div>
 
       {/* Summary Cards */}

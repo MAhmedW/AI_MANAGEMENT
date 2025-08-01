@@ -1,18 +1,40 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export default function SignUpPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState("");
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [agreedConsent, setAgreedConsent] = useState(false);
   const [error, setError] = useState("");
+  const [role, setRole] = useState("");
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const token = params.get("token");
+
+    if (token) {
+      try {
+        const decoded = JSON.parse(atob(token));
+        if (decoded.role === "developer" || decoded.role === "client") {
+          setRole(decoded.role);
+        } else {
+          setError("Invalid role in signup token.");
+        }
+      } catch (err) {
+        setError("Invalid or corrupted signup link.");
+      }
+    } else {
+      setRole("manager"); // default fallback role
+    }
+  }, [location.search]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -21,19 +43,41 @@ export default function SignUpPage() {
       return;
     }
 
-    if (!role) {
-      setError("Please select a role");
-      return;
-    }
-
     if (!agreedTerms || !agreedConsent) {
       setError("Please agree to both checkboxes before signing up");
       return;
     }
 
-    // Proceed with signup
-    if (name && email && password && role) {
-      navigate("/dashboard");
+    try {
+      const res = await fetch("http://localhost:5000/api/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          role,
+          agreedTerms,
+          agreedConsent,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "Signup failed");
+      }
+
+      const data = await res.json();
+      localStorage.setItem("user", JSON.stringify({ role, ...data.user }));
+
+      if (role === "manager") navigate("/managerDashboard");
+      else if (role === "developer") navigate("/developerDashboard");
+      else if (role === "client") navigate("/clientDashboard");
+      else navigate("/signin");
+    } catch (err) {
+      setError(err.message || "Signup failed");
     }
   };
 
@@ -44,11 +88,8 @@ export default function SignUpPage() {
           Create an Account
         </h2>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Full Name
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
             <input
               type="text"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
@@ -59,11 +100,8 @@ export default function SignUpPage() {
             />
           </div>
 
-          {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
               type="email"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
@@ -74,11 +112,8 @@ export default function SignUpPage() {
             />
           </div>
 
-          {/* Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <input
               type="password"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
@@ -89,11 +124,8 @@ export default function SignUpPage() {
             />
           </div>
 
-          {/* Confirm Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Confirm Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
             <input
               type="password"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
@@ -104,28 +136,6 @@ export default function SignUpPage() {
             />
           </div>
 
-          {/* Role Dropdown */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Select Role
-            </label>
-            <select
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              required
-            >
-              <option value="">Select a role</option>
-              <option value="Project Manager">Project Manager</option>
-              <option value="Team Lead">Team Lead</option>
-              <option value="Developer">Developer</option>
-              <option value="Designer">Designer</option>
-              <option value="Business Analyst">Business Analyst</option>
-              <option value="QA Tester">QA Tester</option>
-            </select>
-          </div>
-
-          {/* Checkbox: Terms */}
           <div className="flex items-start space-x-2">
             <input
               type="checkbox"
@@ -147,7 +157,6 @@ export default function SignUpPage() {
             </label>
           </div>
 
-          {/* Checkbox: Consent */}
           <div className="flex items-start space-x-2">
             <input
               type="checkbox"
@@ -161,12 +170,10 @@ export default function SignUpPage() {
             </label>
           </div>
 
-          {/* Error */}
           {error && (
             <p className="text-sm text-red-600 text-center -mt-1">{error}</p>
           )}
 
-          {/* Submit */}
           <button
             type="submit"
             className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition border-4 border-[#19581B] shadow"
@@ -175,7 +182,6 @@ export default function SignUpPage() {
           </button>
         </form>
 
-        {/* Link to Sign In */}
         <p className="mt-6 text-sm text-center text-gray-600">
           Already have an account?{" "}
           <span

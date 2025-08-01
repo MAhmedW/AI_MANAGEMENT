@@ -9,7 +9,6 @@ export default function SignInPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
 
-  // Load remembered email if it exists
   useEffect(() => {
     const rememberedEmail = localStorage.getItem("rememberedEmail");
     if (rememberedEmail) {
@@ -18,7 +17,7 @@ export default function SignInPage() {
     }
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (rememberMe) {
@@ -27,17 +26,30 @@ export default function SignInPage() {
       localStorage.removeItem("rememberedEmail");
     }
 
-    if (email === "manager@gmail.com" && password === "manager") {
-      localStorage.setItem("user", JSON.stringify({ role: "manager" }));
+    try {
+      const res = await fetch("http://localhost:5000/api/signin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      // ✅ Save user to localStorage with manager role
+      localStorage.setItem(
+        "user",
+        JSON.stringify({ role: "manager", ...data.user })
+      );
+
       navigate("/managerDashboard");
-    } else if (email === "developer@gmail.com" && password === "developer") {
-      localStorage.setItem("user", JSON.stringify({ role: "developer" }));
-      navigate("/developerDashboard");
-    } else if (email === "client@gmail.com" && password === "client") {
-      localStorage.setItem("user", JSON.stringify({ role: "client" }));
-      navigate("/clientDashboard");
-    } else {
-      setError("Invalid email or password");
+    } catch (err) {
+      setError(err.message || "Login failed");
     }
   };
 
